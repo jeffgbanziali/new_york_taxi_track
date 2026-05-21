@@ -49,8 +49,8 @@ case "$1" in
     echo ">>> Lancement datamart.py (agregations Gold -> MySQL)..."
     $SPARK_SUBMIT \
       --master $MASTER \
-      --executor-memory 512m \
-      --driver-memory 512m \
+      --executor-memory 1536m \
+      --driver-memory 1536m \
       --jars $MYSQL_JAR \
       $PIPELINE_DIR/datamart.py
     ;;
