@@ -9,7 +9,9 @@ import time
 spark = (
     SparkSession.builder
     .appName("processor")
-    .enableHiveSupport()
+    .enableHiveSupport() 
+    .config("hive.metastore.uris", "thrift://hive-metastore:9083") 
+    .config("spark.sql.warehouse.dir", "hdfs://namenode:9000/user/hive/warehouse")
     .getOrCreate()
 )
 
