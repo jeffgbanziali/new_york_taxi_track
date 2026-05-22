@@ -9,18 +9,47 @@ st.set_page_config(page_title="NYC Taxi Hub - Gold Insights", page_icon="🚕", 
 
 API_URL = os.environ.get("API_URL", "http://api:5000/api")
 
-# ── Fonction de lecture ───────────────────────────────────────
+# ── SÉCURITÉ JWT : Authentification en tâche de fond ────────────────
+def get_jwt_token():
+    """Se connecte à l'API pour récupérer ou vérifier le jeton JWT en mémoire de session."""
+    if "jwt_token" not in st.session_state:
+        try:
+            # Identifiants sécurisés synchronisés avec l'API Flask
+            credentials = {"username": "admin_taxi", "password": "Efrei2026!"}
+            response = requests.post(f"{API_URL}/login", json=credentials, timeout=5)
+            if response.status_code == 200:
+                st.session_state["jwt_token"] = response.json().get("token")
+            else:
+                st.error("Impossible de s'authentifier auprès de l'API (Code 401).")
+        except Exception as e:
+            st.error(f"Erreur de connexion réseau avec l'API Sécurisée : {e}")
+
+# ── Fonction de lecture modifiée pour injecter le JWT ───────────────
 def load_data_from_api(endpoint, params=None):
-    """Interroge l'API Flask et force systématiquement toutes les colonnes en minuscules."""
+    """Interroge l'API Flask en transmettant le jeton JWT obligatoire."""
+    # S'assure que le token est initialisé
+    get_jwt_token()
+    token = st.session_state.get("jwt_token")
+    
+    if not token:
+        return pd.DataFrame()
+
+    # Ajout du token Bearer dans les headers HTTP (Sécurité Phase 1)
+    headers = {"Authorization": f"Bearer {token}"}
+    
     for _ in range(5):
         try:
-            response = requests.get(f"{API_URL}/{endpoint}", params=params, timeout=10)
+            response = requests.get(f"{API_URL}/{endpoint}", params=params, headers=headers, timeout=10)
             if response.status_code == 200:
                 data = response.json()
                 if data:
                     df = pd.DataFrame(data)
                     df.columns = df.columns.str.lower()
                     return df
+            elif response.status_code == 401:
+                # Si le token a expiré, on le supprime pour forcer un renouvellement
+                st.session_state.pop("jwt_token", None)
+                get_jwt_token()
         except Exception:
             time.sleep(1)
     return pd.DataFrame()
@@ -56,7 +85,7 @@ GPS_ZONES_REPLI = {
 
 # ── Header ────────────────────────────────────────────────────
 st.title("NYC Taxi Analytics Dashboard")
-st.markdown("**Architecture Consommation Gold** — Streamlit Frontend ──> API Flask (Port 5000) ──> MySQL Server")
+st.markdown("**Architecture Consommation Gold Sécurisée (JWT)** — Streamlit Frontend ──> API Flask Gateway ──> MySQL Server")
 st.divider()
 
 # Récupération initiale
@@ -219,5 +248,5 @@ with col_meteo:
         st.plotly_chart(fig_meteo, use_container_width=True)
     else:
         st.info("Données de corrélation météo temporairement indisponibles.")
-
+        
 st.caption("Fichiers de données traités par la stack Big Data de l'Efrei — Évaluation 2026")

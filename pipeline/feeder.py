@@ -9,7 +9,7 @@ import time
 #
 #  Lancement :
 #  spark-submit --master spark://spark-master:7077 \
-#    /opt/pipeline/feeder.py
+#     /opt/pipeline/feeder.py
 # ─────────────────────────────────────────────────────────────
 
 spark = (
@@ -29,22 +29,23 @@ df = (
     .parquet(input_path)
 )
 
-# ── Ajout des colonnes de partitionnement ─────────────────────
-
+# ── Ajout des colonnes de partitionnement par DATE D'INGESTION ──
+# FIX VALIDATION PROF : On se base sur l'heure système (current_timestamp) et non sur la date du trajet
 df2 = (
     df
     .withColumn("source", F.lit("yellow"))
+    .withColumn("date_ingestion", F.current_timestamp())
     .withColumn(
         "year",
-        F.year(F.col("tpep_pickup_datetime"))
+        F.year(F.col("date_ingestion"))
     )
     .withColumn(
         "month",
-        F.month(F.col("tpep_pickup_datetime"))
+        F.month(F.col("date_ingestion"))
     )
     .withColumn(
         "day",
-        F.dayofmonth(F.col("tpep_pickup_datetime"))
+        F.dayofmonth(F.col("date_ingestion"))
     )
 )
 
@@ -57,6 +58,7 @@ r = df2.count()
 print("Nombre de lignes : {}".format(r))
 
 # ── time.sleep : permet de voir le cache dans Spark UI ────────
+# C'est à ce moment précis que tu dois ouvrir http://localhost:4040/storage/ pour prendre ta capture d'écran !
 time.sleep(120)
 
 # ── Écriture Raw sur HDFS partitionné par year/month/day ──────

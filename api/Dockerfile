@@ -2,12 +2,11 @@ FROM python:3.9-slim
 
 WORKDIR /app
 
-RUN pip install --no-cache-dir \
-    flask==2.3.3 \
-    flask-cors==4.0.0 \
-    mysql-connector-python==8.2.0
+COPY requirements.txt .
 
-COPY app.py .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
 
 EXPOSE 5000
 

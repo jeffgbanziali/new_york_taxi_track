@@ -1,10 +1,11 @@
 #!/bin/bash
 
 # ─────────────────────────────────────────────────────────────
-#  submit.sh — Lance les 4 pipelines Spark dans l'ordre
+#  submit.sh — Lance les 5 pipelines Spark dans l'ordre
 #
 #  Usage depuis spark-master :
 #    bash /opt/pipeline/submit.sh api_collector
+#    bash /opt/pipeline/submit.sh zone_feeder
 #    bash /opt/pipeline/submit.sh feeder
 #    bash /opt/pipeline/submit.sh processor
 #    bash /opt/pipeline/submit.sh datamart
@@ -27,6 +28,15 @@ case "$1" in
       $PIPELINE_DIR/api_collector.py
     ;;
 
+  zone_feeder)
+    echo ">>> Lancement zone_feeder.py (ingestion des zones de taxi)..."
+    $SPARK_SUBMIT \
+      --master $MASTER \
+      --executor-memory 512m \
+      --driver-memory 512m \
+      $PIPELINE_DIR/zone_feeder.py
+    ;;
+
   feeder)
     echo ">>> Lancement feeder.py (ingestion taxi)..."
     $SPARK_SUBMIT \
@@ -37,7 +47,7 @@ case "$1" in
     ;;
 
   processor)
-    echo ">>> Lancement processor.py (nettoyage + jointure meteo)..."
+    echo ">>> Lancement processor.py (nettoyage + jointures)..."
     $SPARK_SUBMIT \
       --master $MASTER \
       --executor-memory 1536m \
@@ -56,16 +66,17 @@ case "$1" in
     ;;
 
   all)
-    echo ">>> Lancement pipeline complet..."
+    echo ">>> Lancement du pipeline complet de production..."
     bash $0 api_collector
+    bash $0 zone_feeder     
     bash $0 feeder
     bash $0 processor
     bash $0 datamart
-    echo ">>> Pipeline complet termine !"
+    echo ">>> Le pipeline complet a ete execute avec succes !"
     ;;
 
   *)
-    echo "Usage : bash submit.sh [api_collector|feeder|processor|datamart|all]"
+    echo "Usage : bash submit.sh [api_collector|zone_feeder|feeder|processor|datamart|all]"
     exit 1
     ;;
 esac

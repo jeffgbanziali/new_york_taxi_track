@@ -3,9 +3,9 @@ from pyspark.sql.types import DoubleType, IntegerType
 from pyspark.sql.window import Window
 import time
 
-# ─────────────────────────────
-# Spark Session
-# ─────────────────────────────
+# ─────────────────────────────────────────────────────────────
+# Spark Session (Connexion aux composants du cluster)
+# ─────────────────────────────────────────────────────────────
 spark = (
     SparkSession.builder
     .appName("processor")
@@ -15,16 +15,16 @@ spark = (
     .getOrCreate()
 )
 
-# ─────────────────────────────
-# Paths HDFS
-# ─────────────────────────────
+# ─────────────────────────────────────────────────────────────
+# Chemins HDFS (Entrées des données brutes de la couche Raw)
+# ─────────────────────────────────────────────────────────────
 taxi_path    = "hdfs://namenode:9000/data/raw/nyc_taxi"
 weather_path = "hdfs://namenode:9000/data/raw/weather"
 zones_path   = "hdfs://namenode:9000/data/raw/zone"
 
-# ─────────────────────────────
-# Read data
-# ─────────────────────────────
+# ─────────────────────────────────────────────────────────────
+# Lecture des données Parquet depuis HDFS
+# ─────────────────────────────────────────────────────────────
 print("Lecture Raw Taxi...")
 df = spark.read.parquet(taxi_path)
 
@@ -34,9 +34,9 @@ df_weather = spark.read.parquet(weather_path)
 print("Lecture Zones...")
 df_zones = spark.read.parquet(zones_path)
 
-# ─────────────────────────────
-# Cast & clean taxi
-# ─────────────────────────────
+# ─────────────────────────────────────────────────────────────
+# Nettoyage et conversion des types (Data Cleaning)
+# ─────────────────────────────────────────────────────────────
 df2 = (
     df
     .withColumn("passenger_count", F.col("passenger_count").cast(IntegerType()))
@@ -54,9 +54,9 @@ df2 = (
     .dropDuplicates(["tpep_pickup_datetime", "PULocationID", "total_amount"])
 )
 
-# ─────────────────────────────
-# Feature engineering
-# ─────────────────────────────
+# ─────────────────────────────────────────────────────────────
+# Calculs de nouvelles colonnes (Feature engineering)
+# ─────────────────────────────────────────────────────────────
 df2 = (
     df2
     .withColumn("pickup_hour", F.hour("tpep_pickup_datetime"))
@@ -72,9 +72,9 @@ df2 = (
     .filter(F.col("trip_duration_min").between(1, 180))
 )
 
-# ─────────────────────────────
-# Zones join (IMPORTANT FIX)
-# ─────────────────────────────
+# ─────────────────────────────────────────────────────────────
+# Jointure optimisée avec les Zones de Taxi
+# ─────────────────────────────────────────────────────────────
 df_zones_pu = (
     df_zones
     .selectExpr("LocationID as PULocationID", "Borough as PU_Borough", "Zone as PU_Zone")
@@ -91,9 +91,9 @@ df2 = (
     .join(F.broadcast(df_zones_do), "DOLocationID", "left")
 )
 
-# ─────────────────────────────
-# Weather join
-# ─────────────────────────────
+# ─────────────────────────────────────────────────────────────
+# Jointure optimisée avec la Météo
+# ─────────────────────────────────────────────────────────────
 df_weather_join = df_weather.select(
     "date", "hour",
     "temperature", "precipitation",
@@ -112,33 +112,37 @@ df2 = (
     .drop("pickup_date_str", "date", "hour")
 )
 
-# ─────────────────────────────
-# Ranking
-# ─────────────────────────────
+# ─────────────────────────────────────────────────────────────
+# Fonctions d'analyse de fenêtrage (Window Functions obligatoires)
+# ─────────────────────────────────────────────────────────────
 window_spec = Window.partitionBy("PU_Borough").orderBy(F.desc("total_amount"))
 df2 = df2.withColumn("rank_in_borough", F.rank().over(window_spec))
 
-# ─────────────────────────────
-# Persist
-# ─────────────────────────────
+# ─────────────────────────────────────────────────────────────
+# Persistance en mémoire (Pour la Spark UI)
+# ─────────────────────────────────────────────────────────────
 df2.persist()
 print("Rows Silver:", df2.count())
 
+# Petite pause pour te laisser le temps de voir les données dans http://localhost:4040
 time.sleep(60)
 
-# ─────────────────────────────
-# Fix partition columns (IMPORTANT)
-# ─────────────────────────────
+# ─────────────────────────────────────────────────────────────
+# Partitionnement par la DATE D'INGESTION (Exigence Professeur)
+# ─────────────────────────────────────────────────────────────
+# On demande à Spark de regarder l'horloge de l'ordinateur (la date de maintenant)
 df2 = (
     df2
-    .withColumn("year", F.col("pickup_year"))
-    .withColumn("month", F.col("pickup_month"))
-    .withColumn("day", F.dayofmonth("pickup_date"))
+    .withColumn("silver_ingestion", F.current_timestamp())
+    .withColumn("year", F.year(F.col("silver_ingestion")))
+    .withColumn("month", F.month(F.col("silver_ingestion")))
+    .withColumn("day", F.dayofmonth(F.col("silver_ingestion")))
+    .drop("silver_ingestion")
 )
 
-# ─────────────────────────────
-# Write Hive
-# ─────────────────────────────
+# ─────────────────────────────────────────────────────────────
+# Écriture dans le Data Warehouse (Table Silver Hive)
+# ─────────────────────────────────────────────────────────────
 (
     df2
     .write
@@ -148,6 +152,6 @@ df2 = (
     .saveAsTable("default.nyc_taxi_silver")
 )
 
-print("Silver OK → Hive table created")
+print("Silver OK → Table Hive créée et rangée dans l'étagère du jour.")
 
 spark.stop()

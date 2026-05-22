@@ -1,115 +1,91 @@
 from flask import Flask, jsonify, request
-import mysql.connector
-from mysql.connector import pooling
-import os
-import sys
+import jwt
+import datetime
+import controllers
 
 app = Flask(__name__)
 
-# ── Connexion Pool MySQL ──────────────────────────────────────
-try:
-    db_pool = pooling.MySQLConnectionPool(
-        pool_name="gold_pool",
-        pool_size=5,
-        host=os.environ.get("MYSQL_HOST", "mysql-gold"),
-        user=os.environ.get("MYSQL_USER", "taxi_user"),
-        password=os.environ.get("MYSQL_PASSWORD", "taxi1234"),
-        database=os.environ.get("MYSQL_DATABASE", "gold")
-    )
-except mysql.connector.Error as err:
-    print(f"Erreur d'initialisation du Pool MySQL: {err}")
-    sys.exit(1)
+# Clé secrète pour signer les jetons JWT (à garder très confidentielle)
+SECRET_KEY = "efrei_super_secret_key_2026"
 
-def execute_query(query, params=()):
-    conn = db_pool.get_connection()
-    cursor = conn.cursor(dictionary=True)
+def check_jwt_token():
+    """Vérifie et décode le jeton JWT fourni dans l'en-tête Authorization."""
+    auth_header = request.headers.get("Authorization")
+    if not auth_header:
+        return False
+        
     try:
-        cursor.execute(query, params)
-        result = cursor.fetchall()
-        return result
-    except mysql.connector.Error as err:
-        print(f"Erreur SQL sur la requête [{query}]: {err}")
-        return None
-    finally:
-        cursor.close()
-        conn.close()
+        # L'en-tête doit être au format "Bearer <token>"
+        token = auth_header.split(" ")[1]
+        jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+        return True
+    except Exception:
+        # Si le jeton est expiré, modifié ou mal formé
+        return False
 
-# ── Routes API ────────────────────────────────────────────────
+# ── Route d'Authentification (Génération du JWT) ─────────────────────
+
+@app.route('/api/login', methods=['POST'])
+def login():
+    auth_data = request.json
+    if not auth_data or 'username' not in auth_data or 'password' not in auth_data:
+        return jsonify({"error": "Missing credentials"}), 400
+        
+    # Vérification des identifiants (fictifs mais sécurisés pour le projet)
+    if auth_data['username'] == 'admin_taxi' and auth_data['password'] == 'Efrei2026!':
+        # Génération d'un token valide pour 30 minutes
+        token = jwt.encode({
+            'user': auth_data['username'],
+            'exp': datetime.datetime.utcnow() + datetime.timedelta(minutes=30)
+        }, SECRET_KEY, algorithm="HS256")
+        
+        return jsonify({"token": token}), 200
+        
+    return jsonify({"error": "Invalid username or password"}), 401
+
+# ── Routes des Données (Sécurisées par JWT) ──────────────────────────
 
 @app.route('/api/status', methods=['GET'])
 def get_status():
-    return jsonify({"status": "online", "layer": "Gold", "database": "MySQL"}), 200
+    return jsonify({"status": "online", "layer": "Gold", "security": "JWT"}), 200
 
 @app.route('/api/zones', methods=['GET'])
-def get_kpi_zones():
+def api_zones():
+    if not check_jwt_token():
+        return jsonify({"error": "Unauthorized. Invalid or expired JWT Token"}), 401
+        
     borough = request.args.get('borough', None)
     limit = request.args.get('limit', type=int)
-    
-    query = "SELECT borough, zone, nb_trajets, ca_total, tarif_moyen, pourboire_moyen, distance_moy, duree_moy, rang_borough FROM kpi_par_zone"
-    params = []
-    
-    if borough and borough != "Tous":
-        query += " WHERE borough = %s"
-        params.append(borough)
-        
-    query += " ORDER BY ca_total DESC"
-    
-    if limit:
-        query += " LIMIT %s"
-        params.append(limit)
-        
-    data = execute_query(query, tuple(params))
+    data = controllers.get_zones_data(borough, limit)
     return jsonify(data)
 
 @app.route('/api/heures', methods=['GET'])
-def get_kpi_heures():
-    query = "SELECT heure, jour_semaine, mois, nb_trajets, ca_total, tarif_moyen FROM kpi_par_heure ORDER BY heure ASC"
-    data = execute_query(query)
+def api_heures():
+    if not check_jwt_token():
+        return jsonify({"error": "Unauthorized"}), 401
+    data = controllers.get_heures_data()
     return jsonify(data)
 
 @app.route('/api/paiements', methods=['GET'])
-def get_kpi_paiements():
+def api_paiements():
+    if not check_jwt_token():
+        return jsonify({"error": "Unauthorized"}), 401
     borough = request.args.get('borough', None)
-    query = "SELECT borough, mode_paiement, nb_trajets, tarif_moyen FROM kpi_paiement"
-    params = []
-    if borough and borough != "Tous":
-        query += " WHERE borough = %s"
-        params.append(borough)
-        
-    data = execute_query(query, tuple(params))
+    data = controllers.get_paiements_data(borough)
     return jsonify(data)
 
 @app.route('/api/aeroports', methods=['GET'])
-def get_kpi_aeroports():
-    # FIX EFFECTUÉ : Suppression de ca_total qui n'a pas été calculé dans Spark pour cette table
-    query = """
-        SELECT 
-            aeroport, 
-            nb_trajets, 
-            tarif_moyen, 
-            distance_moy, 
-            duree_moy 
-        FROM kpi_aeroports 
-        ORDER BY nb_trajets DESC
-    """
-    data = execute_query(query)
+def api_aeroports():
+    if not check_jwt_token():
+        return jsonify({"error": "Unauthorized"}), 401
+    data = controllers.get_aeroports_data()
     return jsonify(data)
 
 @app.route('/api/meteo', methods=['GET'])
-def get_kpi_meteo():
-    query = """
-        SELECT 
-            meteo, 
-            temp_moy, 
-            pluie_moy, 
-            nb_trajets, 
-            tarif_moyen, 
-            pourboire_moyen, 
-            duree_moy 
-        FROM kpi_meteo 
-        ORDER BY nb_trajets DESC
-    """
-    data = execute_query(query)
+def api_meteo():
+    if not check_jwt_token():
+        return jsonify({"error": "Unauthorized"}), 401
+    data = controllers.get_meteo_data()
     return jsonify(data)
 
 if __name__ == '__main__':

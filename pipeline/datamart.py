@@ -1,5 +1,6 @@
 from pyspark.sql import SparkSession, functions as F
 from pyspark.sql.window import Window
+import os
 import time
 
 # ─────────────────────────────────────────────────────────────
@@ -11,20 +12,22 @@ spark = (
     SparkSession.builder
     .appName("datamart")
     .enableHiveSupport()
-    # FIX IMPORTANT : On connecte Spark au vrai magasin de métadonnées du projet
     .config("hive.metastore.uris", "thrift://hive-metastore:9083")
     .getOrCreate()
 )
 
-# ── Connexion MySQL ───────────────────────────────────────────
-mysql_url    = "jdbc:mysql://mysql-gold:3306/gold?useSSL=false&allowPublicKeyRetrieval=true"
-mysql_user   = "taxi_user"
-mysql_pass   = "taxi1234"
+# ── Connexion MySQL Sécurisée (Lecture via le fichier .env) ──
+mysql_host  = os.environ.get("MYSQL_HOST", "mysql-gold")
+mysql_db    = os.environ.get("MYSQL_DATABASE", "gold")
+mysql_user  = os.environ.get("MYSQL_USER", "taxi_user")
+mysql_pass  = os.environ.get("MYSQL_PASSWORD", "taxi1234")
+
+mysql_url    = f"jdbc:mysql://{mysql_host}:3306/{mysql_db}?useSSL=false&allowPublicKeyRetrieval=true"
 mysql_driver = "com.mysql.cj.jdbc.Driver"
 
 def write_mysql(df, table):
     (
-        # FIX IMPORTANT : .coalesce(1) évite que Spark n'ouvre des dizaines de 
+        # .coalesce(1) évite que Spark n'ouvre des dizaines de 
         # connexions simultanées, ce qui ferait planter ton conteneur MySQL.
         df.coalesce(1)
         .write
@@ -49,12 +52,13 @@ print("Lignes Silver à traiter : {}".format(df.count()))
 
 df.createOrReplaceTempView("silver")
 
-# Pause de 2 minutes pour te laisser le temps de regarder l'UI YARN (http://localhost:8088)
+# Pause pour te laisser le temps de capturer l'UI YARN (http://localhost:8088)
 print("Pause de 120s pour inspection UI...")
 time.sleep(120)
 
 # ── DataMart 1 : KPIs par zone ────────────────────────────────
 print("Calcul du DataMart 1 : kpi_par_zone...")
+# FIX SYNTAXE : On applique le tri sur le nom calculé dans le SELECT ('ca_total')
 window_zone = Window.partitionBy("borough").orderBy(F.desc("ca_total"))
 
 df_zone = (
