@@ -749,5 +749,6 @@ Ajout :
 
 # Auteur
 
+Jeff GBANZIALI & Franck MBOUTOU
 Projet Big Data framework 
-Efrei Paris — Évaluation 2026
+Efrei Paris — Juin 2026
