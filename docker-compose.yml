@@ -229,6 +229,35 @@ services:
     depends_on:
       - mysql
 
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: mysql-ui
+    restart: always
+    ports:
+      - "8085:80"
+    environment:
+      - PMA_HOST=mysql-gold
+      - PMA_USER=root
+      - PMA_PASSWORD=root1234
+    depends_on:
+      - mysql
+
+  hue:
+    image: gethue/hue:4.10.0
+    container_name: hive-hdfs-ui
+    restart: always
+    ports:
+      - "8888:8888"
+    environment:
+      - HIE_SHM_SIZE=2G
+    # Configuration directe pour brancher Hue sur ton Hive-Server et le NameNode HDFS
+    volumes:
+      - ./hue.ini:/usr/share/hue/desktop/conf/hue.ini
+    depends_on:
+      - hive-server
+      - namenode
+
 volumes:
   hadoop_namenode:
   hadoop_datanode:
