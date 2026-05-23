@@ -154,61 +154,63 @@ Préparation de datasets exploitables pour :
 
   NYC Taxi Parquet               Open-Meteo API                 Taxi Zone CSV
 
-         │
-         ▼
+         └──────────────────────────────────────────────────────────────┘
 
-┌──────────────────────────────────────────────────────────────────────────┐
-│                               BRONZE LAYER                              │
-│--------------------------------------------------------------------------│
-│ HDFS + Apache Parquet + Snappy Compression                               │
-│                                                                          │
-│ /data/raw/nyc_taxi                                                       │
-│ /data/raw/weather                                                        │
-│ /data/raw/zone                                                           │
-└──────────────────────────────────────────────────────────────────────────┘
+                                        │
+                                        ▼
 
-         │
-         ▼
+    ┌──────────────────────────────────────────────────────────────────────────┐
+    │                               BRONZE LAYER                              │
+    │--------------------------------------------------------------------------│
+    │ HDFS + Apache Parquet + Snappy Compression                               │
+    │                                                                          │
+    │ /data/raw/nyc_taxi                                                       │
+    │ /data/raw/weather                                                        │
+    │ /data/raw/zone                                                           │
+    └──────────────────────────────────────────────────────────────────────────┘
 
-┌──────────────────────────────────────────────────────────────────────────┐
-│                               SILVER LAYER                              │
-│--------------------------------------------------------------------------│
-│ Apache Spark + Hive                                                      │
-│                                                                          │
-│ - nettoyage                                                              │
-│ - cast des types                                                         │
-│ - enrichissement météo                                                   │
-│ - enrichissement géographique                                            │
-│ - suppression des doublons                                               │
-│ - suppression des valeurs aberrantes                                     │
-│ - Broadcast Join                                                         │
-│ - Window Functions                                                       │
-└──────────────────────────────────────────────────────────────────────────┘
+                                        │
+                                        ▼
 
-         │
-         ▼
+    ┌──────────────────────────────────────────────────────────────────────────┐
+    │                               SILVER LAYER                              │
+    │--------------------------------------------------------------------------│
+    │ Apache Spark + Hive                                                      │
+    │                                                                          │
+    │ - nettoyage                                                              │
+    │ - cast des types                                                         │
+    │ - enrichissement météo                                                   │
+    │ - enrichissement géographique                                            │
+    │ - suppression des doublons                                               │
+    │ - suppression des valeurs aberrantes                                     │
+    │ - Broadcast Join                                                         │
+    │ - Window Functions                                                       │
+    └──────────────────────────────────────────────────────────────────────────┘
 
-┌──────────────────────────────────────────────────────────────────────────┐
-│                                GOLD LAYER                               │
-│--------------------------------------------------------------------------│
-│ MySQL DataMarts                                                          │
-│                                                                          │
-│ - kpi_par_zone                                                           │
-│ - kpi_par_heure                                                          │
-│ - kpi_paiement                                                           │
-│ - kpi_aeroports                                                          │
-│ - kpi_meteo_demande                                                      │
-└──────────────────────────────────────────────────────────────────────────┘
+                                        │
+                                        ▼
 
-         │
-         ▼
+    ┌──────────────────────────────────────────────────────────────────────────┐
+    │                                GOLD LAYER                               │
+    │--------------------------------------------------------------------------│
+    │ MySQL DataMarts                                                          │
+    │                                                                          │
+    │ - kpi_par_zone                                                           │
+    │ - kpi_par_heure                                                          │
+    │ - kpi_paiement                                                           │
+    │ - kpi_aeroports                                                          │
+    │ - kpi_meteo_demande                                                      │
+    └──────────────────────────────────────────────────────────────────────────┘
 
-┌──────────────────────────────────────────────────────────────────────────┐
-│                           CONSUMPTION LAYER                             │
-│--------------------------------------------------------------------------│
-│ Flask API + JWT                                                          │
-│ Streamlit Dashboard                                                      │
-└──────────────────────────────────────────────────────────────────────────┘
+                                        │
+                                        ▼
+
+    ┌──────────────────────────────────────────────────────────────────────────┐
+    │                           CONSUMPTION LAYER                             │
+    │--------------------------------------------------------------------------│
+    │ Flask API + JWT                                                          │
+    │ Streamlit Dashboard                                                      │
+    └──────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -316,6 +318,7 @@ datamart.py
 Big_data_framework/
 │
 ├── .env
+├── hue.ini
 ├── docker-compose.yml
 ├── convert_snappy.py
 ├── startup.sh
@@ -705,47 +708,6 @@ JWT permet :
 
 ---
 
-# Évolutions futures
-
-## Data Streaming
-
-Migration vers :
-
-- Kafka,
-- Spark Structured Streaming.
-
----
-
-## Lakehouse moderne
-
-Migration vers :
-
-- Delta Lake,
-- Iceberg,
-- Hudi.
-
----
-
-## Orchestration industrielle
-
-Ajout :
-
-- Apache Airflow,
-- DAGs,
-- scheduling,
-- retry automatique.
-
----
-
-## Monitoring avancé
-
-Ajout :
-
-- ELK Stack,
-- Prometheus,
-- Grafana.
-
----
 
 # Auteur
 

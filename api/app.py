@@ -5,7 +5,8 @@ import controllers
 
 app = Flask(__name__)
 
-# Clé secrète pour signer les jetons JWT (à garder très confidentielle)
+# Clé secrète pour signer les jetons JWT
+
 SECRET_KEY = "efrei_super_secret_key_2026"
 
 def check_jwt_token():
@@ -15,15 +16,13 @@ def check_jwt_token():
         return False
         
     try:
-        # L'en-tête doit être au format "Bearer <token>"
         token = auth_header.split(" ")[1]
         jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
         return True
     except Exception:
-        # Si le jeton est expiré, modifié ou mal formé
         return False
 
-# ── Route d'Authentification (Génération du JWT) ─────────────────────
+# ── Route d'Authentification (Génération du JWT) ────
 
 @app.route('/api/login', methods=['POST'])
 def login():
@@ -43,7 +42,7 @@ def login():
         
     return jsonify({"error": "Invalid username or password"}), 401
 
-# ── Routes des Données (Sécurisées par JWT) ──────────────────────────
+# ── Routes ──
 
 @app.route('/api/status', methods=['GET'])
 def get_status():

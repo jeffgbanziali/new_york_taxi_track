@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 from pyspark.sql import SparkSession, functions as F
 from pyspark.sql.types import StructType, StructField, StringType, DoubleType, IntegerType
@@ -7,25 +6,12 @@ import urllib.request
 import json
 import time
 
-# ─────────────────────────────────────────────────────────────
-#  api_collector.py — Collecte météo NYC via Open-Meteo API
-#
-#  Appelle l'API Open-Meteo (gratuit, sans clé)
-#  et sauvegarde les données météo sur HDFS Raw
-#  partitionné par year/month/day
-#
-#  Lancement :
-#  spark-submit --master spark://spark-master:7077 \
-#    /opt/pipeline/api_collector.py
-# ─────────────────────────────────────────────────────────────
-
 spark = (
     SparkSession.builder
     .appName("api_collector")
     .getOrCreate()
 )
 
-# ── Paramètres API (variables, pas codés en dur) ──────────────
 LATITUDE    = "40.7143"    # New York City
 LONGITUDE   = "-74.006"
 START_DATE  = "2024-01-01"
@@ -47,7 +33,6 @@ API_URL = (
     end=END_DATE
 )
 
-# ── Appel API Open-Meteo ──────────────────────────────────────
 print("Appel API Open-Meteo...")
 print("URL : {}".format(API_URL))
 
@@ -60,7 +45,7 @@ except Exception as e:
     spark.stop()
     exit(1)
 
-# ── Transformation en liste de dictionnaires ──────────────────
+# ── Transformation en liste de dictionnaires ───────
 hourly = raw_data.get("hourly", {})
 timestamps    = hourly.get("time", [])
 temperatures  = hourly.get("temperature_2m", [])
@@ -70,14 +55,13 @@ weathercodes  = hourly.get("weathercode", [])
 
 print("Nombre d'heures recues : {}".format(len(timestamps)))
 
-# ── Création d'une liste de rows ──────────────────────────────
+# ── Création d'une liste de rows ────────
 rows = []
 for i in range(len(timestamps)):
     ts = timestamps[i]
-    # ts format : "2024-01-01T00:00"
     dt_parts = ts.split("T")
-    date_part = dt_parts[0]          # "2024-01-01"
-    time_part = dt_parts[1]          # "00:00"
+    date_part = dt_parts[0]          
+    time_part = dt_parts[1]          
     hour = int(time_part.split(":")[0])
     year  = int(date_part.split("-")[0])
     month = int(date_part.split("-")[1])
@@ -96,7 +80,7 @@ for i in range(len(timestamps)):
         int(weathercodes[i])     if weathercodes[i]   is not None else 0,
     ))
 
-# ── Schéma du DataFrame météo ─────────────────────────────────
+# ── Schéma du DataFrame météo ──────
 schema = StructType([
     StructField("datetime",      StringType(),  True),
     StructField("date",          StringType(),  True),
@@ -110,10 +94,10 @@ schema = StructType([
     StructField("weathercode",   IntegerType(), True),
 ])
 
-# ── Création du DataFrame Spark ───────────────────────────────
+# ── Création du DataFrame Spark ──────
 df_weather = spark.createDataFrame(rows, schema=schema)
 
-# ── Ajout colonne description météo ──────────────────────────
+# ── Ajout colonne description météo ─────
 df_weather = df_weather.withColumn(
     "weather_desc",
     F.when(F.col("weathercode") == 0,  "Ciel clair")
@@ -125,15 +109,12 @@ df_weather = df_weather.withColumn(
      .otherwise("Inconnu")
 )
 
-# ── cache() visible dans Spark UI ────────────────────────────
 df_weather.cache()
 df_weather.show(10)
 print("Lignes météo : {}".format(df_weather.count()))
 
-# ── time.sleep pour voir dans Spark UI ────────────────────────
 time.sleep(120)
 
-# ── Écriture Raw sur HDFS partitionné par year/month/day ──────
 (
     df_weather
     .write

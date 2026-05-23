@@ -3,7 +3,6 @@ from mysql.connector import pooling
 import os
 import sys
 
-# Initialisation sécurisée du pool de connexions (via .env)
 try:
     db_pool = pooling.MySQLConnectionPool(
         pool_name="gold_pool",

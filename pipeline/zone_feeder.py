@@ -1,10 +1,8 @@
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
 
-# Initialisation de la session Spark
 spark = SparkSession.builder.appName("zone_feeder").getOrCreate()
 
-# Chemins variables (Zéro chemin en dur)
 input_path = "file:///source/zone/taxi_zone_lookup.csv"
 output_path = "hdfs://namenode:9000/data/raw/zone"
 

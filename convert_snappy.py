@@ -1,4 +1,3 @@
-# convert_snappy.py — à mettre à la racine du projet et lancer sur ton PC
 import pandas as pd
 import os
 

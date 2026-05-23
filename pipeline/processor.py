@@ -3,9 +3,6 @@ from pyspark.sql.types import DoubleType, IntegerType
 from pyspark.sql.window import Window
 import time
 
-# ─────────────────────────────────────────────────────────────
-# Spark Session (Connexion aux composants du cluster)
-# ─────────────────────────────────────────────────────────────
 spark = (
     SparkSession.builder
     .appName("processor")
@@ -15,16 +12,11 @@ spark = (
     .getOrCreate()
 )
 
-# ─────────────────────────────────────────────────────────────
-# Chemins HDFS (Entrées des données brutes de la couche Raw)
-# ─────────────────────────────────────────────────────────────
 taxi_path    = "hdfs://namenode:9000/data/raw/nyc_taxi"
 weather_path = "hdfs://namenode:9000/data/raw/weather"
 zones_path   = "hdfs://namenode:9000/data/raw/zone"
 
-# ─────────────────────────────────────────────────────────────
 # Lecture des données Parquet depuis HDFS
-# ─────────────────────────────────────────────────────────────
 print("Lecture Raw Taxi...")
 df = spark.read.parquet(taxi_path)
 
@@ -34,9 +26,7 @@ df_weather = spark.read.parquet(weather_path)
 print("Lecture Zones...")
 df_zones = spark.read.parquet(zones_path)
 
-# ─────────────────────────────────────────────────────────────
 # Nettoyage et conversion des types (Data Cleaning)
-# ─────────────────────────────────────────────────────────────
 df2 = (
     df
     .withColumn("passenger_count", F.col("passenger_count").cast(IntegerType()))
@@ -54,9 +44,7 @@ df2 = (
     .dropDuplicates(["tpep_pickup_datetime", "PULocationID", "total_amount"])
 )
 
-# ─────────────────────────────────────────────────────────────
-# Calculs de nouvelles colonnes (Feature engineering)
-# ─────────────────────────────────────────────────────────────
+# Calculs de nouvelles colonnes 
 df2 = (
     df2
     .withColumn("pickup_hour", F.hour("tpep_pickup_datetime"))
@@ -72,9 +60,7 @@ df2 = (
     .filter(F.col("trip_duration_min").between(1, 180))
 )
 
-# ─────────────────────────────────────────────────────────────
-# Jointure optimisée avec les Zones de Taxi
-# ─────────────────────────────────────────────────────────────
+# Jointure avec les Zones de Taxi
 df_zones_pu = (
     df_zones
     .selectExpr("LocationID as PULocationID", "Borough as PU_Borough", "Zone as PU_Zone")
@@ -91,9 +77,7 @@ df2 = (
     .join(F.broadcast(df_zones_do), "DOLocationID", "left")
 )
 
-# ─────────────────────────────────────────────────────────────
-# Jointure optimisée avec la Météo
-# ─────────────────────────────────────────────────────────────
+# Jointure  avec la Météo
 df_weather_join = df_weather.select(
     "date", "hour",
     "temperature", "precipitation",
@@ -112,25 +96,18 @@ df2 = (
     .drop("pickup_date_str", "date", "hour")
 )
 
-# ─────────────────────────────────────────────────────────────
-# Fonctions d'analyse de fenêtrage (Window Functions obligatoires)
-# ─────────────────────────────────────────────────────────────
+# Fonctions d'analyse de fenêtrage 
 window_spec = Window.partitionBy("PU_Borough").orderBy(F.desc("total_amount"))
 df2 = df2.withColumn("rank_in_borough", F.rank().over(window_spec))
 
-# ─────────────────────────────────────────────────────────────
 # Persistance en mémoire (Pour la Spark UI)
-# ─────────────────────────────────────────────────────────────
 df2.persist()
 print("Rows Silver:", df2.count())
 
-# Petite pause pour te laisser le temps de voir les données dans http://localhost:4040
 time.sleep(60)
 
-# ─────────────────────────────────────────────────────────────
-# Partitionnement par la DATE D'INGESTION (Exigence Professeur)
-# ─────────────────────────────────────────────────────────────
-# On demande à Spark de regarder l'horloge de l'ordinateur (la date de maintenant)
+# Partitionnement par la DATE D'INGESTION 
+# On demande à Spark de regarder l'horloge de l'ordinateur 
 df2 = (
     df2
     .withColumn("silver_ingestion", F.current_timestamp())
@@ -140,9 +117,7 @@ df2 = (
     .drop("silver_ingestion")
 )
 
-# ─────────────────────────────────────────────────────────────
 # Écriture dans le Data Warehouse (Table Silver Hive)
-# ─────────────────────────────────────────────────────────────
 (
     df2
     .write

@@ -9,7 +9,6 @@ st.set_page_config(page_title="NYC Taxi Hub - Gold Insights", page_icon="🚕", 
 
 API_URL = os.environ.get("API_URL", "http://api:5000/api")
 
-# ── SÉCURITÉ JWT : Authentification en tâche de fond ────────────────
 def get_jwt_token():
     """Se connecte à l'API pour récupérer ou vérifier le jeton JWT en mémoire de session."""
     if "jwt_token" not in st.session_state:
@@ -24,10 +23,8 @@ def get_jwt_token():
         except Exception as e:
             st.error(f"Erreur de connexion réseau avec l'API Sécurisée : {e}")
 
-# ── Fonction de lecture modifiée pour injecter le JWT ───────────────
 def load_data_from_api(endpoint, params=None):
     """Interroge l'API Flask en transmettant le jeton JWT obligatoire."""
-    # S'assure que le token est initialisé
     get_jwt_token()
     token = st.session_state.get("jwt_token")
     
@@ -54,8 +51,7 @@ def load_data_from_api(endpoint, params=None):
             time.sleep(1)
     return pd.DataFrame()
 
-# ── Référentiel géographique ──────────────────────────────────
-@st.cache_data
+# ── Référentiel géographique ──
 def load_nyc_taxi_zones_lookup():
     """Charge le référentiel officiel de New York avec la latitude/longitude de chaque zone."""
     url = "https://raw.githubusercontent.com/toddwschneider/nyc-taxi-data/master/setup/taxi_zones.csv"
@@ -83,7 +79,7 @@ GPS_ZONES_REPLI = {
     'Williamsburg (North Side)': {'lat': 40.7175, 'lon': -73.9566}
 }
 
-# ── Header ────────────────────────────────────────────────────
+# ── Header ──
 st.title("NYC Taxi Analytics Dashboard")
 st.markdown("**Architecture Consommation Gold Sécurisée (JWT)** — Streamlit Frontend ──> API Flask Gateway ──> MySQL Server")
 st.divider()
@@ -95,7 +91,8 @@ if df_init_zones.empty:
     st.error("Impossible de joindre l'API Flask ou la base MySQL-Gold est vide. Vérifiez vos conteneurs Docker.")
     st.stop()
 
-# ── Barre Latérale de Filtrage Interactif ─────────────────────
+# Barre Latérale de Filtrage  
+
 st.sidebar.header("Configuration des Tops & Filtres")
 boroughs_list = ["Tous"] + sorted(list(df_init_zones["borough"].dropna().unique()))
 selected_borough = st.sidebar.selectbox("Filtrer par District (Borough) :", boroughs_list)
@@ -121,7 +118,7 @@ c4.metric("Pourboire moyen", "${:.2f}".format(df_all_zones["pourboire_moyen"].me
 
 st.divider()
 
-# ── Section des Récompenses / Podiums Textuels ──
+# ── Section des Récompenses / Podiums ──
 st.subheader("Les Faits Marquants du Cluster (Podiums des Tops)")
 p1, p2, p3 = st.columns(3)
 
@@ -149,7 +146,7 @@ with p3:
 
 st.divider()
 
-# ── Section 2 : Carte Géographique Réelle et Top des Zones ────────────
+# ── Section 2 : Carte Géographique Réelle et Top des Zones ──
 col_map, col_chart = st.columns([1.2, 1])
 
 with col_map:
@@ -189,7 +186,7 @@ with col_chart:
 
 st.divider()
 
-# ── Section 3 : Temporelle et Modes de Paiements ──────────────
+# ── Section 3 : Temporelle et Modes de Paiements ───
 col_time, col_pay = st.columns(2)
 
 with col_time:

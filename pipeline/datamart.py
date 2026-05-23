@@ -3,11 +3,6 @@ from pyspark.sql.window import Window
 import os
 import time
 
-# ─────────────────────────────────────────────────────────────
-#  datamart.py — Agrégations Gold → MySQL
-# ─────────────────────────────────────────────────────────────
-
-# Initialisation de la session connectée au catalogue centralisé Hive
 spark = (
     SparkSession.builder
     .appName("datamart")
@@ -27,8 +22,6 @@ mysql_driver = "com.mysql.cj.jdbc.Driver"
 
 def write_mysql(df, table):
     (
-        # .coalesce(1) évite que Spark n'ouvre des dizaines de 
-        # connexions simultanées, ce qui ferait planter ton conteneur MySQL.
         df.coalesce(1)
         .write
         .format("jdbc")
@@ -42,7 +35,6 @@ def write_mysql(df, table):
     )
     print("Table MySQL creee avec succes : {}".format(table))
 
-# ── Lecture Silver depuis Hive ────────────────────────────────
 print("Lecture de la table nyc_taxi_silver depuis Hive...")
 df = spark.table("default.nyc_taxi_silver")
 
@@ -52,7 +44,6 @@ print("Lignes Silver à traiter : {}".format(df.count()))
 
 df.createOrReplaceTempView("silver")
 
-# Pause pour te laisser le temps de capturer l'UI YARN (http://localhost:8088)
 print("Pause de 120s pour inspection UI...")
 time.sleep(120)
 
@@ -80,7 +71,7 @@ df_zone = (
 )
 write_mysql(df_zone, "kpi_par_zone")
 
-# ── DataMart 2 : KPIs par heure ───────────────────────────────
+# ── DataMart 2 : KPIs par heure ──────
 print("Calcul du DataMart 2 : kpi_par_heure...")
 window_heure = Window.partitionBy("mois").orderBy(F.desc("nb_trajets"))
 
@@ -133,7 +124,7 @@ df_paiement = (
 )
 write_mysql(df_paiement, "kpi_paiement")
 
-# ── DataMart 4 : Aéroports ────────────────────────────────────
+# ── DataMart 4 : Aéroports ───
 print("Calcul du DataMart 4 : kpi_aeroports...")
 df_aeroport = spark.sql("""
     SELECT
@@ -149,7 +140,7 @@ df_aeroport = spark.sql("""
 """)
 write_mysql(df_aeroport, "kpi_aeroports")
 
-# ── DataMart 5 : Météo & Corrélations ─────────────────────────
+# ── DataMart 5 : Météo & Corrélations ────────
 print("Calcul du DataMart 5 : kpi_meteo...")
 window_meteo = Window.partitionBy("meteo").orderBy(F.desc("nb_trajets"))
 

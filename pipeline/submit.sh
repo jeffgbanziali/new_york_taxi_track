@@ -1,17 +1,3 @@
-#!/bin/bash
-
-# ─────────────────────────────────────────────────────────────
-#  submit.sh — Lance les 5 pipelines Spark dans l'ordre
-#
-#  Usage depuis spark-master :
-#    bash /opt/pipeline/submit.sh api_collector
-#    bash /opt/pipeline/submit.sh zone_feeder
-#    bash /opt/pipeline/submit.sh feeder
-#    bash /opt/pipeline/submit.sh processor
-#    bash /opt/pipeline/submit.sh datamart
-#    bash /opt/pipeline/submit.sh all
-# ─────────────────────────────────────────────────────────────
-
 SPARK_SUBMIT="/spark/bin/spark-submit"
 MASTER="spark://spark-master:7077"
 PIPELINE_DIR="/opt/pipeline"
