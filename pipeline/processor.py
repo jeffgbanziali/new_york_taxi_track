@@ -104,7 +104,6 @@ df2 = df2.withColumn("rank_in_borough", F.rank().over(window_spec))
 df2.persist()
 print("Rows Silver:", df2.count())
 
-time.sleep(60)
 
 # Partitionnement par la DATE D'INGESTION 
 # On demande à Spark de regarder l'horloge de l'ordinateur 

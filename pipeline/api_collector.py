@@ -113,7 +113,6 @@ df_weather.cache()
 df_weather.show(10)
 print("Lignes météo : {}".format(df_weather.count()))
 
-time.sleep(120)
 
 (
     df_weather

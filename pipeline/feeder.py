@@ -43,7 +43,6 @@ r = df2.count()
 print("Nombre de lignes : {}".format(r))
 
 
-time.sleep(120)
 
 
 df2 = df2.repartition(16)

@@ -45,7 +45,6 @@ print("Lignes Silver à traiter : {}".format(df.count()))
 df.createOrReplaceTempView("silver")
 
 print("Pause de 120s pour inspection UI...")
-time.sleep(120)
 
 # ── DataMart 1 : KPIs par zone ────────────────────────────────
 print("Calcul du DataMart 1 : kpi_par_zone...")

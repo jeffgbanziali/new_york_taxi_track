@@ -48,7 +48,7 @@ def load_data_from_api(endpoint, params=None):
                 st.session_state.pop("jwt_token", None)
                 get_jwt_token()
         except Exception:
-            time.sleep(1)
+            print("err")
     return pd.DataFrame()
 
 # ── Référentiel géographique ──
