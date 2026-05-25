@@ -1,25 +1,8 @@
 version: "3"
 
-# ─────────────────────────────────────────────────────────────
-#  NYC TAXI — Architecture Médaillon Production-Ready
-#
-#  Interfaces disponibles :
-#    HDFS UI        → http://localhost:9870
-#    YARN UI        → http://localhost:8088
-#    Spark Master   → http://localhost:8080
-#    Spark App UI   → http://localhost:4040
-#    Hive           → localhost:10000
-#    MySQL Gold     → localhost:3306
-#    API Flask      → http://localhost:5000
-#    Dashboard      → http://localhost:8501
-#    phpMyAdmin     → http://localhost:8085
-# ─────────────────────────────────────────────────────────────
 
 services:
 
-  # ════════════════════════════════════════════════════════════
-  #  HADOOP CLUSTER
-  # ════════════════════════════════════════════════════════════
   namenode:
     image: bde2020/hadoop-namenode:2.0.0-hadoop3.2.1-java8
     container_name: namenode
@@ -81,9 +64,6 @@ services:
     env_file:
       - ./hadoop.env
 
-  # ════════════════════════════════════════════════════════════
-  #  SPARK CLUSTER (Master + 2 Workers)
-  # ════════════════════════════════════════════════════════════
   spark-master:
     image: bde2020/spark-master:3.0.0-hadoop3.2
     container_name: spark-master
@@ -137,9 +117,6 @@ services:
       - ./source:/source
       - ./pipeline:/opt/pipeline
 
-  # ════════════════════════════════════════════════════════════
-  #  HIVE METASTORE & WAREHOUSE
-  # ════════════════════════════════════════════════════════════
   hive-server:
     image: bde2020/hive:2.3.2-postgresql-metastore
     container_name: hive-server
@@ -177,9 +154,6 @@ services:
     ports:
       - "8089:8089"
 
-  # ════════════════════════════════════════════════════════════
-  #  AJOUTS PROJET (MySQL Gold + API Separée + Streamlit REST)
-  # ════════════════════════════════════════════════════════════
   mysql:
     image: mysql:8.0
     container_name: mysql-gold
